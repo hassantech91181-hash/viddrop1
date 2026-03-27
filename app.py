@@ -265,6 +265,16 @@ def health():
     return jsonify({"status": "ok", "version": "1.0.0"})
 
 
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def serve(path):
+    base = os.path.dirname(__file__)
+    target = os.path.join(base, path)
+    if path and os.path.exists(target):
+        return send_from_directory(base, path)
+    return send_from_directory(base, "index.html")
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
     app.run(host="0.0.0.0", port=port, debug=False)
