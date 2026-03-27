@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VidDrop — تحميل الفيديوهات</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --accent: #00e5ff;
+    --accent2: #ff3d6b;
+    --accent3: #a855f7;
+    --text: #e8e8f0;
+    --muted: #6b6b8a;
+    --border: rgba(255,255,255,0.07);
+    --glow: 0 0 40px rgba(0,229,255,0.15);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+  .blob { position: fixed; border-radius: 50%; filter: blur(120px); opacity: 0.12; pointer-events: none; z-index: 0; animation: drift 20s ease-in-out infinite; }
+  .blob-1 { width: 600px; height: 600px; background: var(--accent); top: -200px; right: -200px; }
+  .blob-2 { width: 500px; height: 500px; background: var(--accent2); bottom: -200px; left: -200px; animation-delay: -10s; }
+  .blob-3 { width: 400px; height: 400px; background: var(--accent3); top: 50%; left: 50%; transform: translate(-50%,-50%); animation-delay: -5s; }
+  @keyframes drift { 0%,100%{transform:translate(0,0)} 33%{transform:translate(30px,-30px)} 66%{transform:translate(-20px,20px)} }
+
+  .container { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 0 24px; }
+  header { position: relative; z-index: 1; padding: 28px 24px 0; display: flex; align-items: center; justify-content: space-between; max-width: 860px; margin: 0 auto; }
+  .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .logo-icon { width: 42px; height: 42px; background: linear-gradient(135deg, var(--accent), var(--accent3)); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .logo-text { font-family: 'Space Mono', monospace; font-size: 22px; font-weight: 700; color: var(--text); letter-spacing: -1px; }
+  .logo-text span { color: var(--accent); }
+  .badge { background: rgba(0,229,255,0.1); border: 1px solid rgba(0,229,255,0.2); color: var(--accent); font-size: 12px; padding: 4px 12px; border-radius: 20px; font-family: 'Space Mono', monospace; }
+
+  .hero { position: relative; z-index: 1; text-align: center; padding: 70px 0 50px; }
+  .hero-tag { display: inline-flex; align-items: center; gap: 8px; background: rgba(168,85,247,0.1); border: 1px solid rgba(168,85,247,0.25); color: #c084fc; font-size: 13px; padding: 6px 16px; border-radius: 20px; margin-bottom: 28px; }
+  .hero-tag::before { content:''; width:6px; height:6px; background:#c084fc; border-radius:50%; animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+  h1 { font-size: clamp(36px, 6vw, 64px); font-weight: 900; line-height: 1.1; margin-bottom: 20px; letter-spacing: -2px; }
+  h1 .gradient-text { background: linear-gradient(135deg, var(--accent) 0%, var(--accent3) 50%, var(--accent2) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .hero-sub { color: var(--muted); font-size: 17px; max-width: 480px; margin: 0 auto 50px; line-height: 1.7; font-weight: 300; }
+
+  .platforms { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 50px; }
+  .platform-pill { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 50px; padding: 8px 18px; font-size: 14px; color: var(--muted); transition: all 0.3s; cursor: default; }
+  .platform-pill:hover { border-color: rgba(0,229,255,0.3); color: var(--text); transform: translateY(-2px); }
+  .pill-icon { font-size: 18px; }
+
+  .main-card { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 36px; box-shadow: var(--glow), 0 40px 80px rgba(0,0,0,0.5); position: relative; overflow: hidden; }
+  .main-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg, transparent, var(--accent), var(--accent3), var(--accent2), transparent); }
+
+  .input-label { font-size: 13px; color: var(--muted); margin-bottom: 12px; font-family: 'Space Mono', monospace; text-transform: uppercase; letter-spacing: 1px; }
+  .input-row { display: flex; gap: 12px; margin-bottom: 8px; }
+  .url-input { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 14px; padding: 16px 20px; font-size: 15px; color: var(--text); font-family: 'Space Mono', monospace; outline: none; transition: border-color 0.3s, box-shadow 0.3s; direction: ltr; }
+  .url-input::placeholder { color: var(--muted); }
+  .url-input:focus { border-color: rgba(0,229,255,0.4); box-shadow: 0 0 0 3px rgba(0,229,255,0.08); }
+  .btn-analyze { background: linear-gradient(135deg, var(--accent), #0099bb); border: none; border-radius: 14px; padding: 16px 28px; font-family: 'Cairo', sans-serif; font-size: 15px; font-weight: 700; color: #0a0a0f; cursor: pointer; transition: all 0.3s; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+  .btn-analyze:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,229,255,0.3); }
+  .btn-analyze:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .spinner-sm { width: 18px; height: 18px; border: 2px solid rgba(10,10,15,0.3); border-top-color: #0a0a0f; border-radius: 50%; animation: spin 0.8s linear infinite; display: none; }
+  .spinner-sm.visible { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .error-msg { background: rgba(255,61,107,0.08); border: 1px solid rgba(255,61,107,0.25); border-radius: 12px; padding: 14px 18px; font-size: 14px; color: #ff6b8a; margin-top: 12px; display: none; }
+  .error-msg.visible { display: block; animation: fadeUp 0.3s ease; }
+
+  .video-preview { display: none; align-items: center; gap: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-top: 24px; }
+  .video-preview.visible { display: flex; animation: fadeUp 0.4s ease; }
+  .thumb-wrap { width: 100px; height: 60px; border-radius: 10px; background: #0a0a0f; flex-shrink: 0; overflow: hidden; position: relative; }
+  .thumb-wrap img { width: 100%; height: 100%; object-fit: cover; }
+  .video-meta { flex: 1; min-width: 0; }
+  .video-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .video-details { font-size: 12px; color: var(--muted); display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .format-section { display: none; margin-top: 28px; animation: fadeUp 0.4s ease; }
+  .format-section.visible { display: block; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .section-title { font-size: 13px; color: var(--muted); font-family: 'Space Mono', monospace; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
+  .format-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .format-option { background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 16px; cursor: pointer; transition: all 0.25s; }
+  .format-option:hover, .format-option.selected { border-color: var(--accent); background: rgba(0,229,255,0.05); }
+  .format-option.selected { box-shadow: 0 0 0 1px var(--accent); }
+  .format-label { font-weight: 700; font-size: 14px; color: var(--accent); font-family: 'Space Mono', monospace; margin-bottom: 3px; }
+  .format-desc { font-size: 12px; color: var(--muted); }
+
+  .btn-download { width: 100%; background: linear-gradient(135deg, var(--accent2), #cc2255); border: none; border-radius: 14px; padding: 18px; font-family: 'Cairo', sans-serif; font-size: 17px; font-weight: 700; color: white; cursor: pointer; transition: all 0.3s; margin-top: 16px; display: none; align-items: center; justify-content: center; gap: 10px; }
+  .btn-download.visible { display: flex; }
+  .btn-download:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(255,61,107,0.35); }
+  .btn-download:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .progress-wrap { display: none; margin-top: 20px; animation: fadeUp 0.3s ease; }
+  .progress-wrap.visible { display: block; }
+  .progress-bar-bg { background: var(--surface2); border-radius: 20px; height: 8px; overflow: hidden; margin-bottom: 10px; }
+  .progress-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent3)); border-radius: 20px; width: 0%; transition: width 0.5s ease; }
+  .progress-text { font-size: 13px; color: var(--muted); text-align: center; }
+
+  .features { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 50px; }
+  .feature-card { background: var(--surface); border: 1px solid var(--border); border-radius: 18px; padding: 24px; transition: all 0.3s; }
+  .feature-card:hover { border-color: rgba(0,229,255,0.2); transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+  .feature-icon { font-size: 28px; margin-bottom: 12px; }
+  .feature-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+  .feature-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+  .disclaimer-banner { position: relative; z-index: 1; margin-top: 50px; background: rgba(255,61,107,0.06); border: 1px solid rgba(255,61,107,0.25); border-radius: 18px; padding: 28px 32px; }
+  .disclaimer-banner::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background: linear-gradient(90deg, transparent, var(--accent2), transparent); border-radius:2px; }
+  .disclaimer-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .disclaimer-icon { width: 40px; height: 40px; background: rgba(255,61,107,0.15); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .disclaimer-title { font-size: 18px; font-weight: 700; color: var(--accent2); }
+  .disclaimer-body { font-size: 14px; color: #a0a0b8; line-height: 1.85; }
+  .disclaimer-body strong { color: var(--text); }
+  .disclaimer-points { margin-top: 16px; padding-right: 20px; display: flex; flex-direction: column; gap: 10px; }
+  .disclaimer-point { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: #8888aa; line-height: 1.7; }
+  .disclaimer-point::before { content:'›'; color: var(--accent2); font-weight: 700; font-size: 18px; flex-shrink: 0; margin-top: -2px; }
+
+  footer { position: relative; z-index: 1; text-align: center; padding: 40px 24px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); margin-top: 50px; }
+  .footer-logo { font-family: 'Space Mono', monospace; font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text); }
+  .footer-logo span { color: var(--accent); }
+
+  .toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 24px; font-size: 14px; color: var(--text); box-shadow: 0 20px 40px rgba(0,0,0,0.5); opacity: 0; transition: all 0.35s; z-index: 100; pointer-events: none; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: rgba(0,229,255,0.3); color: var(--accent); }
+  .toast.error { border-color: rgba(255,61,107,0.3); color: var(--accent2); }
+
+  @media (max-width: 600px) {
+    .input-row { flex-direction: column; }
+    .main-card { padding: 24px 20px; }
+    .format-grid { grid-template-columns: 1fr 1fr; }
+    .video-preview { flex-direction: column; text-align: center; }
+    .video-details { justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
+
+<header>
+  <a href="#" class="logo">
+    <div class="logo-icon">⬇️</div>
+    <div class="logo-text">Vid<span>Drop</span></div>
+  </a>
+  <div class="badge">v1.0 LIVE</div>
+</header>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-tag">أسرع أداة تحميل مجانية</div>
+    <h1>حمّل أي فيديو<br><span class="gradient-text">في ثوانٍ</span></h1>
+    <p class="hero-sub">أدخل الرابط — واختار الجودة — وحمّل فوراً. بدون إعلانات. بدون تسجيل.</p>
+    <div class="platforms">
+      <div class="platform-pill"><span class="pill-icon">▶️</span> YouTube</div>
+      <div class="platform-pill"><span class="pill-icon">📘</span> Facebook</div>
+      <div class="platform-pill"><span class="pill-icon">📸</span> Instagram</div>
+      <div class="platform-pill"><span class="pill-icon">🎵</span> TikTok</div>
+      <div class="platform-pill"><span class="pill-icon">🐦</span> Twitter/X</div>
+      <div class="platform-pill"><span class="pill-icon">🔗</span> وغيرها</div>
+    </div>
+  </div>
+
+  <!-- Main Card -->
+  <div class="main-card">
+    <div class="input-label">الصق رابط الفيديو هنا</div>
+    <div class="input-row">
+      <input type="url" class="url-input" id="urlInput" placeholder="https://www.youtube.com/watch?v=..." />
+      <button class="btn-analyze" id="analyzeBtn" onclick="analyzeUrl()">
+        <span id="btnText">تحليل</span>
+        <div class="spinner-sm" id="spinner"></div>
+      </button>
+    </div>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <!-- Video preview -->
+    <div class="video-preview" id="videoPreview">
+      <div class="thumb-wrap" id="thumbWrap">
+        <img id="thumbImg" src="" alt="thumbnail" style="display:none;" onerror="this.style.display='none'" />
+      </div>
+      <div class="video-meta">
+        <div class="video-title" id="videoTitle">—</div>
+        <div class="video-details">
+          <span id="videoDuration">—</span>
+          <span id="videoUploader">—</span>
+          <span id="videoPlatform">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Format selector -->
+    <div class="format-section" id="formatSection">
+      <div class="section-title">اختر الجودة والصيغة</div>
+      <div class="format-grid" id="formatGrid"></div>
+
+      <button class="btn-download" id="downloadBtn" onclick="startDownload()">
+        ⬇️ تحميل الآن
+      </button>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar-bg">
+          <div class="progress-bar-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text" id="progressText">جاري التحضير...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="features">
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">سرعة فائقة</div>
+      <div class="feature-desc">تحليل الرابط في ثوانٍ مع خوادم عالية السرعة</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <div class="feature-title">جودات متعددة</div>
+      <div class="feature-desc">من 144p حتى 4K، واختيار MP3 للصوت فقط</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <div class="feature-title">بدون تسجيل</div>
+      <div class="feature-desc">لا حساب، لا إيميل، لا بيانات شخصية</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📱</div>
+      <div class="feature-title">يعمل على الجوال</div>
+      <div class="feature-desc">متوافق مع كل الأجهزة والمتصفحات</div>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer-banner">
+    <div class="disclaimer-header">
+      <div class="disclaimer-icon">⚠️</div>
+      <div class="disclaimer-title">إخلاء مسؤولية قانوني — يُرجى القراءة</div>
+    </div>
+    <div class="disclaimer-body">
+      <strong>VidDrop</strong> هي أداة تقنية توفر خدمة تحميل الفيديوهات من الروابط العامة. باستخدامك لهذا الموقع فأنت تقر وتوافق على ما يلي:
+      <div class="disclaimer-points">
+        <div class="disclaimer-point">الموقع وأصحابه <strong>غير مسؤولين</strong> عن أي انتهاك لحقوق الملكية الفكرية من قِبَل المستخدم.</div>
+        <div class="disclaimer-point">المستخدم يتحمل <strong>المسؤولية الكاملة</strong> عن التأكد من امتلاكه الإذن اللازم من صاحب حقوق الفيديو.</div>
+        <div class="disclaimer-point">تحميل الفيديوهات المحمية <strong>دون إذن صريح</strong> قد يُعدّ انتهاكاً للقوانين، ولا تتحمل إدارة الموقع أي مسؤولية تجاه ذلك.</div>
+        <div class="disclaimer-point"><strong>صاحب الموقع ليس طرفاً</strong> في أي نزاع قانوني ينشأ عن سوء استخدام هذه الخدمة.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo">Vid<span>Drop</span></div>
+  <div>© 2025 VidDrop — جميع الحقوق محفوظة</div>
+  <div style="margin-top:8px; font-size:12px;">الاستخدام يعني موافقتك على إخلاء المسؤولية أعلاه</div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── CONFIG ─────────────────────────────────────────────────────────────
+  // Change this to your server address when deployed
+  const API_BASE = "";  // Same domain on Railway
+  // ───────────────────────────────────────────────────────────────────────
+
+  let selectedFormat = null;
+  let currentUrl = null;
+
+  // ── Analyze ─────────────────────────────────────────────────────────────
+  async function analyzeUrl() {
+    const url = document.getElementById('urlInput').value.trim();
+    if (!url) { showError('أدخل رابط الفيديو أولاً'); return; }
+
+    setLoading(true);
+    hideError();
+    resetResults();
+
+    try {
+      const res = await fetch(`${API_BASE}/api/info`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        showError(data.error || 'حدث خطأ أثناء تحليل الرابط');
+        return;
+      }
+
+      currentUrl = url;
+      renderVideoInfo(data);
+      renderFormats(data.formats);
+      showToast('✅ تم تحليل الرابط بنجاح', 'success');
+
+    } catch (e) {
+      showError('تعذّر الوصول إلى الخادم. تأكد أن الـ Backend يعمل.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function renderVideoInfo(data) {
+    const thumb = document.getElementById('thumbImg');
+    if (data.thumbnail) {
+      thumb.src = data.thumbnail;
+      thumb.style.display = 'block';
+    }
+    document.getElementById('videoTitle').textContent = data.title || 'فيديو';
+    document.getElementById('videoDuration').textContent = data.duration ? `⏱ ${data.duration}` : '';
+    document.getElementById('videoUploader').textContent = data.uploader ? `👤 ${data.uploader}` : '';
+    document.getElementById('videoPlatform').textContent = data.platform ? `🌐 ${data.platform}` : '';
+    document.getElementById('videoPreview').classList.add('visible');
+  }
+
+  function renderFormats(formats) {
+    const grid = document.getElementById('formatGrid');
+    grid.innerHTML = '';
+    formats.forEach(f => {
+      const div = document.createElement('div');
+      div.className = 'format-option';
+      div.innerHTML = `<div class="format-label">${f.label}</div><div class="format-desc">${f.desc}</div>`;
+      div.onclick = () => selectFormat(div, f);
+      grid.appendChild(div);
+    });
+    document.getElementById('formatSection').classList.add('visible');
+  }
+
+  function selectFormat(el, format) {
+    document.querySelectorAll('.format-option').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedFormat = format;
+    document.getElementById('downloadBtn').classList.add('visible');
+    document.getElementById('progressWrap').classList.remove('visible');
+  }
+
+  // ── Download ─────────────────────────────────────────────────────────────
+  async function startDownload() {
+    if (!selectedFormat || !currentUrl) return;
+
+    const downloadBtn = document.getElementById('downloadBtn');
+    const progressWrap = document.getElementById('progressWrap');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = '⏳ جاري التحضير...';
+    progressWrap.classList.add('visible');
+    progressFill.style.width = '10%';
+    progressText.textContent = 'جاري تحضير الملف على الخادم...';
+
+    try {
+      const res = await fetch(`${API_BASE}/api/download`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: currentUrl,
+          format_id: selectedFormat.id,
+          type: selectedFormat.type,
+        })
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        showError(err.error || 'فشل التحميل');
+        resetProgress();
+        return;
+      }
+
+      progressFill.style.width = '70%';
+      progressText.textContent = 'جاري إرسال الملف...';
+
+      // Read blob from response
+      const blob = await res.blob();
+
+      progressFill.style.width = '100%';
+      progressText.textContent = '✅ تم! جاري حفظ الملف...';
+
+      // Trigger browser download
+      const disposition = res.headers.get('content-disposition') || '';
+      const match = disposition.match(/filename\*?=['"]?(?:UTF-8'')?([^'"\n;]+)/i);
+      let filename = match ? decodeURIComponent(match[1]) : `video.${selectedFormat.ext || 'mp4'}`;
+
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(objectUrl);
+
+      showToast('🎉 تم التحميل بنجاح!', 'success');
+
+      setTimeout(() => {
+        resetProgress();
+        downloadBtn.disabled = false;
+        downloadBtn.innerHTML = '⬇️ تحميل مرة أخرى';
+      }, 3000);
+
+    } catch (e) {
+      showError('خطأ أثناء التحميل: ' + e.message);
+      resetProgress();
+    }
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────
+  function setLoading(val) {
+    const btn = document.getElementById('analyzeBtn');
+    const txt = document.getElementById('btnText');
+    const spin = document.getElementById('spinner');
+    btn.disabled = val;
+    txt.style.display = val ? 'none' : '';
+    val ? spin.classList.add('visible') : spin.classList.remove('visible');
+  }
+
+  function resetResults() {
+    selectedFormat = null;
+    document.getElementById('videoPreview').classList.remove('visible');
+    document.getElementById('formatSection').classList.remove('visible');
+    document.getElementById('downloadBtn').classList.remove('visible');
+    document.getElementById('downloadBtn').disabled = false;
+    document.getElementById('downloadBtn').innerHTML = '⬇️ تحميل الآن';
+    resetProgress();
+  }
+
+  function resetProgress() {
+    const pw = document.getElementById('progressWrap');
+    const pf = document.getElementById('progressFill');
+    pw.classList.remove('visible');
+    pf.style.width = '0%';
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('errorMsg');
+    el.textContent = '❌ ' + msg;
+    el.classList.add('visible');
+  }
+
+  function hideError() {
+    document.getElementById('errorMsg').classList.remove('visible');
+  }
+
+  function showToast(msg, type = '') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 3500);
+  }
+
+  document.getElementById('urlInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') analyzeUrl();
+  });
+</script>
+</body>
+</html>
