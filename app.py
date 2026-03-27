@@ -75,6 +75,12 @@ def get_ydl_opts_info(url: str) -> dict:
         "no_warnings": True,
         "skip_download": True,
         "noplaylist": True,
+        # إضافة خدعة تجاوز حظر الويب (Client Spoofing)
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "web"]
+            }
+        },
         "http_headers": {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         },
@@ -179,7 +185,7 @@ def get_video_info():
         if "Private" in msg or "private" in msg:
             return jsonify({"error": "الفيديو خاص أو محمي"}), 400
         if "not available" in msg.lower():
-            return jsonify({"error": "الفيديو غير متاح في منطقتك"}), 400
+            return jsonify({"error": "الفيديو غير متاح في منطقتك أو محمي"}), 400
         return jsonify({"error": f"تعذّر قراءة الرابط: {msg[:120]}"}), 400
     except Exception as e:
         return jsonify({"error": f"خطأ غير متوقع: {str(e)[:100]}"}), 500
@@ -206,6 +212,15 @@ def download_video():
     ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     cookies_opts = {"cookiefile": COOKIES_FILE} if os.path.exists(COOKIES_FILE) else {}
 
+    # تطبيق نفس التحديث هنا لضمان عمل التحميل بعد جلب البيانات
+    spoofing_opts = {
+        "extractor_args": {
+            "youtube": {
+                "player_client": ["android", "ios", "web"]
+            }
+        }
+    }
+
     if dl_type == "audio":
         ydl_opts = {
             "format": format_id,
@@ -215,6 +230,7 @@ def download_video():
             "noplaylist": True,
             "http_headers": {"User-Agent": ua},
             **cookies_opts,
+            **spoofing_opts,
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "mp3",
@@ -231,6 +247,7 @@ def download_video():
             "merge_output_format": "mp4",
             "http_headers": {"User-Agent": ua},
             **cookies_opts,
+            **spoofing_opts,
             "postprocessors": [{
                 "key": "FFmpegVideoConvertor",
                 "preferedformat": "mp4",
