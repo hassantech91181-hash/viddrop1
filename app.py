@@ -16,7 +16,20 @@ app = Flask(__name__, static_folder=".", static_url_path="")
 CORS(app, origins=["*"])
 
 DOWNLOAD_DIR = os.path.join(os.path.dirname(__file__), "downloads")
+COOKIES_FILE = os.path.join(os.path.dirname(__file__), "cookies.txt")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+
+def setup_cookies():
+    """Write cookies from environment variable to file if present."""
+    cookies = os.environ.get("YOUTUBE_COOKIES", "").strip()
+    if cookies:
+        with open(COOKIES_FILE, "w") as f:
+            f.write(cookies)
+        return True
+    return False
+
+# Setup cookies on startup
+setup_cookies()
 
 # Track active downloads for cleanup
 active_jobs = {}
@@ -57,12 +70,18 @@ def format_size(bytes_val):
 
 
 def get_ydl_opts_info(url: str) -> dict:
-    return {
+    opts = {
         "quiet": True,
         "no_warnings": True,
         "skip_download": True,
         "noplaylist": True,
+        "http_headers": {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        },
     }
+    if os.path.exists(COOKIES_FILE):
+        opts["cookiefile"] = COOKIES_FILE
+    return opts
 
 
 # ─────────────────────────────────────────────
@@ -184,6 +203,9 @@ def download_video():
     job_id = uuid.uuid4().hex[:12]
     out_tmpl = os.path.join(DOWNLOAD_DIR, f"{job_id}_%(title).60s.%(ext)s")
 
+    ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    cookies_opts = {"cookiefile": COOKIES_FILE} if os.path.exists(COOKIES_FILE) else {}
+
     if dl_type == "audio":
         ydl_opts = {
             "format": format_id,
@@ -191,6 +213,8 @@ def download_video():
             "quiet": True,
             "no_warnings": True,
             "noplaylist": True,
+            "http_headers": {"User-Agent": ua},
+            **cookies_opts,
             "postprocessors": [{
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": "mp3",
@@ -205,6 +229,8 @@ def download_video():
             "no_warnings": True,
             "noplaylist": True,
             "merge_output_format": "mp4",
+            "http_headers": {"User-Agent": ua},
+            **cookies_opts,
             "postprocessors": [{
                 "key": "FFmpegVideoConvertor",
                 "preferedformat": "mp4",
